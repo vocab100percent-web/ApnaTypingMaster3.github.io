@@ -1,0 +1,186 @@
+// ===== index.html =====
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Apna Typing Master</title>
+<link rel="stylesheet" href="style.css" />
+<script src="script.js" defer></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Apna Typing Master</h1>
+        <p>Professional Typing Tutor (Hindi + English)</p>
+    </div>
+
+    <div class="menu">
+        <button onclick="setMode('english')">English Typing</button>
+        <button onclick="setMode('hindi')">Hindi Typing</button>
+    </div>
+
+    <div id="adminPanel">
+        <h3>Admin Login</h3>
+        <input type="password" id="adminPass" placeholder="Enter Password" />
+        <button onclick="adminLogin()">Login</button>
+    </div>
+
+    <div id="adminBox" style="display:none;">
+        <h3>Add New Passage</h3>
+        <select id="adminLang">
+            <option value="english">English</option>
+            <option value="hindi">Hindi</option>
+        </select>
+        <textarea id="newPassage" placeholder="Write passage..."></textarea>
+        <button onclick="addPassage()">Add Passage</button>
+    </div>
+
+    <div id="settings" style="display:none;"></div>
+    <div id="passageBox"></div>
+    <textarea id="typedBox" disabled></textarea>
+    <div id="resultBox"></div>
+</body>
+</html>
+
+
+// ===== style.css =====
+body {
+    font-family: Arial;
+    background: #f0f0f0;
+    margin: 0;
+}
+.header {
+    background: #222;
+    color: #fff;
+    padding: 20px;
+    text-align:center;
+}
+.menu {
+    display:flex;
+    justify-content:center;
+    gap:20px;
+    margin:20px;
+}
+#settings, #passageBox, #adminBox {
+    background:#fff;
+    padding:20px;
+    margin:20px;
+    border-radius:10px;
+}
+.correct { background:#baffc9; }
+.wrong { background:#ffb3b3; }
+#typedBox{
+    width:90%;
+    height:150px;
+    margin:20px;
+    font-size:18px;
+}
+
+
+// ===== script.js =====
+let passages = {
+    english: ["Typing improves with practice."],
+    hindi: ["भारत एक महान देश है।"]
+};
+
+let selected = "";
+let timer = 0;
+let interval;
+
+function setMode(lang){
+    let s = document.getElementById("settings");
+    s.style.display = "block";
+    s.innerHTML = `
+        <label>Font:</label>
+        <select id="fontSel">
+            <option value="default">Default</option>
+            <option value="mangal">Mangal</option>
+            <option value="krutidev">KrutiDev</option>
+        </select>
+        <label>Time:</label>
+        <select id="timeSel">
+            <option value="60">1 min</option>
+            <option value="120">2 min</option>
+            <option value="300">5 min</option>
+            <option value="600">10 min</option>
+        </select>
+        <label>Backspace:</label>
+        <select id="backSel">
+            <option value="allow">Allow</option>
+            <option value="block">Block</option>
+        </select>
+    `;
+
+    let box = document.getElementById("passageBox");
+    box.innerHTML = "";
+    passages[lang].forEach((p,i)=>{
+        box.innerHTML += `<p onclick='choosePassage(${i},"${lang}")' style='cursor:pointer;'>${p}</p>`;
+    });
+}
+
+function choosePassage(i,lang){
+    selected = passages[lang][i];
+    document.getElementById("passageBox").innerText = selected;
+    let t = document.getElementById("typedBox");
+    t.disabled = false;
+    t.value="";
+    t.focus();
+    startTimer();
+}
+
+function startTimer(){
+    clearInterval(interval);
+    timer = parseInt(document.getElementById("timeSel").value);
+    interval = setInterval(()=>{
+        timer--;
+        if(timer===0){ finish(); }
+    },1000);
+}
+
+document.getElementById("typedBox").addEventListener("input",function(){
+    let typed = this.value;
+    let disp="";
+    for(let i=0;i<typed.length;i++){
+        if(typed[i]===selected[i]) disp+=`<span class='correct'>${selected[i]}</span>`;
+        else disp+=`<span class='wrong'>${selected[i]||""}</span>`;
+    }
+    disp += selected.slice(typed.length);
+    document.getElementById("passageBox").innerHTML = disp;
+
+    if(document.getElementById("backSel").value==="block"){
+        this.value = typed.replace(/.$/,"");
+    }
+});
+
+function finish(){
+    clearInterval(interval);
+    let t = document.getElementById("typedBox").value;
+    let correct = 0;
+    for(let i=0;i<t.length;i++) if(t[i]===selected[i]) correct++;
+    let wrong = t.length - correct;
+
+    let gross = Math.floor(t.length/5);
+    let net = Math.floor((correct - wrong)/5);
+
+    document.getElementById("resultBox").innerHTML = `
+        <h3>Result</h3>
+        Gross: ${gross} WPM <br>
+        Net: ${net<0?0:net} WPM <br>
+        Accuracy: ${Math.floor((correct/t.length)*100)}%
+    `;
+}
+
+function adminLogin(){
+    if(document.getElementById("adminPass").value==="admin123"){
+        document.getElementById("adminBox").style.display="block";
+    }
+}
+
+function addPassage(){
+    let lang = document.getElementById("adminLang").value;
+    let text = document.getElementById("newPassage").value;
+    if(text.length>5){
+        passages[lang].push(text);
+        alert("Passage Added!");
+    }
+}

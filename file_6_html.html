@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hindi Typing Test – Apna Typing Master</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h2 { text-align:center; }
+        select, button, textarea {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+        #passageBox {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+        }
+        #typingArea {
+            height: 150px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+        }
+        .correct { color: green; }
+        .wrong { color: red; }
+        .stats {
+            margin-top: 20px;
+            padding: 15px;
+            background: #eef;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Hindi Typing Test – Mangal / Krutidev / Remington</h2>
+
+        <label>Hindi Font चुनें:</label>
+        <select id="fontSelect">
+            <option value="mangal">Mangal (Inscript)</option>
+            <option value="krutidev">Krutidev 010</option>
+            <option value="remington">Remington Gail</option>
+        </select>
+
+        <label>समय चुनें:</label>
+        <select id="timeSelect">
+            <option value="60">1 Minute</option>
+            <option value="120">2 Minutes</option>
+            <option value="300">5 Minutes</option>
+            <option value="600">10 Minutes</option>
+            <option value="900">15 Minutes</option>
+        </select>
+
+        <label>Backspace Allow?</label>
+        <select id="backspaceSelect">
+            <option value="yes">Allow Backspace</option>
+            <option value="no">Disable Backspace</option>
+        </select>
+
+        <label>Passage चुनें:</label>
+        <select id="passageSelect"></select>
+
+        <div id="passageBox"></div>
+
+        <textarea id="typingArea" placeholder="यहाँ टाइप करना शुरू करें..." disabled></textarea>
+
+        <button id="startBtn">Start Typing</button>
+
+        <div class="stats" id="resultBox" style="display:none;"></div>
+    </div>
+
+<script>
+// ✅ Default Hindi Passages
+const hindiPassages = [
+    "भारत विविधताओं का देश है जहाँ अनेक भाषाएँ, संस्कृतियाँ और परंपराएँ एक साथ मिलकर रहती हैं।",
+    "किसी भी कार्य में सफलता पाने के लिए निरंतर अभ्यास और धैर्य सबसे महत्वपूर्ण होते हैं।",
+    "कंप्यूटर और इंटरनेट ने आधुनिक जीवन को तेज़ और सरल बना दिया है।"
+];
+
+window.onload = function() {
+    let select = document.getElementById("passageSelect");
+    hindiPassages.forEach((p, i) => {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = "Passage " + (i+1);
+        select.appendChild(opt);
+    });
+
+    select.addEventListener("change", ()=>{
+        document.getElementById("passageBox").textContent = hindiPassages[select.value];
+    });
+
+    document.getElementById("passageBox").textContent = hindiPassages[0];
+};
+
+let timer;
+let timeLeft;
+let passage;
+let typed = "";
+
+// ✅ Disable Backspace Logic
+function handleBackspace(e) {
+    if (document.getElementById("backspaceSelect").value === "no") {
+        if (e.key === "Backspace") {
+            e.preventDefault();
+        }
+    }
+}
+
+document.getElementById("startBtn").onclick = function() {
+    passage = document.getElementById("passageBox").textContent.trim();
+    typed = "";
+
+    timeLeft = parseInt(document.getElementById("timeSelect").value);
+    document.getElementById("typingArea").value = "";
+    document.getElementById("typingArea").disabled = false;
+    document.getElementById("typingArea").focus();
+
+    document.getElementById("typingArea").onkeydown = handleBackspace;
+    document.getElementById("typingArea").oninput = checkTyping;
+
+    timer = setInterval(updateTimer, 1000);
+};
+
+function updateTimer() {
+    timeLeft--;
+    if (timeLeft <= 0) {
+        clearInterval(timer);
+        finishTest();
+    }
+}
+
+// ✅ Typing color logic
+function checkTyping() {
+    let userText = document.getElementById("typingArea").value;
+    typed = userText;
+
+    let resultHTML = "";
+
+    for (let i = 0; i < userText.length; i++) {
+        if (userText[i] === passage[i]) {
+            resultHTML += `<span class='correct'>${userText[i]}</span>`;
+        } else {
+            resultHTML += `<span class='wrong'>${userText[i] || ''}</span>`;
+        }
+    }
+
+    document.getElementById("passageBox").innerHTML = resultHTML + passage.slice(userText.length);
+}
+
+// ✅ UPSC/UPSSSC Rule Calculation
+function finishTest() {
+    let totalTyped = typed.length;
+    let correct = 0;
+    let errors = 0;
+
+    for (let i=0; i<typed.length; i++) {
+        if (typed[i] === passage[i]) correct++;
+        else errors++;
+    }
+
+    let grossWPM = Math.round(totalTyped / 5 / (parseInt(document.getElementById("timeSelect").value)/60));
+    let netWPM = Math.max(grossWPM - Math.round(errors / 5), 0);
+    let accuracy = Math.round((correct / typed.length) * 100);
+
+    document.getElementById("resultBox").style.display = "block";
+    document.getElementById("resultBox").innerHTML = `
+        <h3>Result</h3>
+        Gross Speed: <b>${grossWPM}</b> WPM<br>
+        Net Speed: <b>${netWPM}</b> WPM<br>
+        Accuracy: <b>${accuracy}%</b><br>
+        Errors: <b>${errors}</b>
+    `;
+
+    document.getElementById("typingArea").disabled = true;
+}
+</script>
+
+</body>
+</html>

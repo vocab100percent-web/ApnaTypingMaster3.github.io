@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Typing Test - Advanced Version</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f0f0;
+            transition: background 0.3s;
+        }
+        .dark {
+            background: #121212;
+            color: white;
+        }
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        button {
+            padding: 8px 15px;
+            border: none;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+        }
+        .passage-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            font-size: 16px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            background: #fff3cd;
+        }
+        .history-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body id="body">
+    <div class="container">
+        <div class="header">
+            <h2>Typing Test - Advanced</h2>
+            <button onclick="toggleTheme()">Dark/Light Theme</button>
+        </div>
+
+        <h3>Select Passage</h3>
+        <div>
+            <button onclick="loadPassage('short')">Short</button>
+            <button onclick="loadPassage('medium')">Medium</button>
+            <button onclick="loadPassage('long')">Long</button>
+        </div>
+
+        <div id="passageDisplay" class="passage-box">Select any passage to begin.</div>
+
+        <h3>Start Typing Below</h3>
+        <textarea id="typingBox" oninput="checkTyping()" disabled></textarea>
+
+        <button onclick="startCountdown()">Start Test</button>
+
+        <div id="resultBox" class="result" style="display: none"></div>
+
+        <button onclick="downloadPDF()">Download PDF Result</button>
+
+        <div class="history-box">
+            <h3>Previous Scores</h3>
+            <div id="historyList">No history available.</div>
+        </div>
+    </div>
+
+    <script>
+        let passages = {
+            short: "Typing test short passage sample.",
+            medium: "This is a medium length typing passage for practice.",
+            long: "This is a long paragraph passage designed for advanced government exam typing preparation, including UPSC, UPSSSC, High Court requirements and accuracy-focused training."
+        };
+
+        let selectedPassage = "";
+        let penalty = 0;
+        let totalChars = 0;
+        let startTime;
+
+        function loadPassage(type) {
+            selectedPassage = passages[type];
+            document.getElementById("passageDisplay").innerText = selectedPassage;
+            document.getElementById("typingBox").value = "";
+            document.getElementById("typingBox").disabled = true;
+        }
+
+        function startCountdown() {
+            let countdown = 3;
+            let speak = new SpeechSynthesisUtterance();
+
+            let interval = setInterval(() => {
+                speak.text = countdown;
+                speechSynthesis.speak(speak);
+                countdown--;
+
+                if (countdown < 0) {
+                    clearInterval(interval);
+                    speak.text = "Start typing";
+                    speechSynthesis.speak(speak);
+                    document.getElementById("typingBox").disabled = false;
+                    document.getElementById("typingBox").focus();
+                    startTime = new Date().getTime();
+                }
+            }, 1000);
+        }
+
+        function checkTyping() {
+            let typed = document.getElementById("typingBox").value;
+            totalChars = typed.length;
+
+            penalty = 0;
+            for (let i = 0; i < typed.length; i++) {
+                if (typed[i] !== selectedPassage[i]) {
+                    penalty += 5;
+                }
+            }
+
+            if (typed.length === selectedPassage.length) {
+                finishTest();
+            }
+        }
+
+        function finishTest() {
+            let endTime = new Date().getTime();
+            let timeTaken = (endTime - startTime) / 60000;
+            let wpm = Math.round((totalChars / 5) / timeTaken);
+            let accuracy = Math.max(0, Math.round(((totalChars - penalty) / totalChars) * 100));
+
+            let result = `WPM: ${wpm} \nAccuracy: ${accuracy}% \nPenalty: ${penalty}`;
+
+            document.getElementById("resultBox").style.display = "block";
+            document.getElementById("resultBox").innerText = result;
+
+            saveHistory(wpm, accuracy);
+        }
+
+        function saveHistory(wpm, accuracy) {
+            let history = JSON.parse(localStorage.getItem("typingHistory") || "[]");
+            history.push({ wpm, accuracy, time: new Date().toLocaleString() });
+            localStorage.setItem("typingHistory", JSON.stringify(history));
+            loadHistory();
+        }
+
+        function loadHistory() {
+            let history = JSON.parse(localStorage.getItem("typingHistory") || "[]");
+            let box = document.getElementById("historyList");
+            box.innerHTML = history
+                .map(h => `<p>${h.time} → WPM: ${h.wpm}, Accuracy: ${h.accuracy}%</p>`)
+                .join("") || "No history available.";
+        }
+
+        function toggleTheme() {
+            document.getElementById("body").classList.toggle("dark");
+        }
+
+        function downloadPDF() {
+            alert("PDF download feature will be added in backend.");
+        }
+
+        loadHistory();
+    </script>
+</body>
+</html>

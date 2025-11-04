@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>English Passage List — Apna Typing Master</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;background:#f6f8fb;margin:0;padding:20px}
+    header{background:#2b4cff;color:#fff;padding:18px;border-radius:8px}
+    .container{max-width:1000px;margin:18px auto}
+    .card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 8px 24px rgba(11,22,60,0.06)}
+    .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    select,input,button{padding:8px;border-radius:8px;border:1px solid #e6eef8}
+    .list{margin-top:12px}
+    .p-item{padding:10px;border-radius:8px;background:#f4f7ff;margin-bottom:8px;cursor:pointer}
+    .meta{color:#667085;font-size:13px;margin-top:6px}
+    a.back{display:inline-block;margin-top:10px;color:#2b4cff;text-decoration:none}
+  </style>
+</head>
+<body>
+  <header>
+    <div style="max-width:1000px;margin:0 auto;display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <h2 style="margin:0">English Passages</h2>
+        <div style="font-size:13px;opacity:0.9">Choose passage → select time → open typing test</div>
+      </div>
+      <div style="font-size:13px">Apna Typing Master</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="controls">
+        <label>Variety:
+          <select id="varietySel">
+            <option value="in">English (India)</option>
+            <option value="us">English (US)</option>
+            <option value="uk">English (UK)</option>
+          </select>
+        </label>
+
+        <label>Time:
+          <select id="timeSel">
+            <option value="60">1 min</option>
+            <option value="120">2 min</option>
+            <option value="300">5 min</option>
+            <option value="600">10 min</option>
+            <option value="900">15 min</option>
+          </select>
+        </label>
+
+        <label>Disable Backspace:
+          <input type="checkbox" id="backChk" />
+        </label>
+
+        <button id="openCustom" style="margin-left:auto">Open typing test with selected</button>
+      </div>
+
+      <div class="meta">Tip: Click a passage to preview and start test. You can add custom passages using the form below — saved in this browser only.</div>
+
+      <div style="margin-top:12px">
+        <h4>Available passages</h4>
+        <div id="passageList" class="list"></div>
+      </div>
+
+      <div style="margin-top:12px">
+        <h4>Add a custom passage (saved locally)</h4>
+        <input id="title" placeholder="Title (optional)" style="width:100%;margin-bottom:8px" />
+        <textarea id="customText" placeholder="Paste English passage here" style="width:100%;height:100px;padding:8px;border-radius:8px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <select id="customVar">
+            <option value="in">English (India)</option>
+            <option value="us">English (US)</option>
+            <option value="uk">English (UK)</option>
+          </select>
+          <button id="addBtn">Add Passage</button>
+        </div>
+        <div class="meta" style="margin-top:8px">Passages saved to browser localStorage; to share across devices you need a backend (I can add later).</div>
+      </div>
+
+      <a href="english.html" class="back">← Back to English menu</a>
+    </div>
+  </div>
+
+<script>
+// English passages list page — stores and loads passages per variety
+const STORAGE_KEY = 'apna_typing_english_passages_v1';
+const passageListEl = document.getElementById('passageList');
+const varietySel = document.getElementById('varietySel');
+const timeSel = document.getElementById('timeSel');
+const backChk = document.getElementById('backChk');
+const openCustom = document.getElementById('openCustom');
+const addBtn = document.getElementById('addBtn');
+const customText = document.getElementById('customText');
+const customVar = document.getElementById('customVar');
+const titleInput = document.getElementById('title');
+
+let passages = load();
+
+function seedDefaults(){
+  // default passages per variety
+  const defaults = [
+    {id:1, var:'in', title:'Quick fox', text:'The quick brown fox jumps over the lazy dog.'},
+    {id:2, var:'in', title:'Practice', text:'Practice regularly to improve your typing speed and accuracy.'},
+    {id:3, var:'us', title:'Technology', text:'Technology advances rapidly, bringing new tools and methods.'},
+    {id:4, var:'uk', title:'London', text:'London is a historic city with many cultural landmarks.'}
+  ];
+  passages = defaults.concat(passages);
+  save();
+}
+
+function load(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]'); }catch(e){return []} }
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(passages)); }
+
+// add from form
+addBtn.addEventListener('click', ()=>{
+  const txt = customText.value.trim(); if(!txt){ alert('Paste passage first'); return; }
+  const p = {id: Date.now(), var: customVar.value, title: titleInput.value.trim(), text: txt};
+  passages.unshift(p); save(); customText.value=''; titleInput.value=''; render();
+  alert('Passage added locally');
+});
+
+function render(){
+  const varr = varietySel.value; passageListEl.innerHTML='';
+  const filtered = passages.filter(p=> p.var === varr);
+  if(filtered.length===0){ passageListEl.innerHTML = '<div class="meta">No passages. Add one.</div>'; return; }
+  filtered.forEach(p=>{
+    const d = document.createElement('div'); d.className='p-item'; d.innerHTML = `<strong>${p.title||'Passage'}</strong><div style="font-size:13px;margin-top:6px">${p.text.length>200? p.text.slice(0,200)+'...' : p.text}</div>`;
+    d.onclick = ()=> openTestWithPassage(p);
+    passageListEl.appendChild(d);
+  });
+}
+
+function openTestWithPassage(p){
+  // pass data via sessionStorage (safer) and navigate to typing_test.html
+  sessionStorage.setItem('apna_selected_passage', JSON.stringify(p));
+  sessionStorage.setItem('apna_selected_options', JSON.stringify({time: parseInt(timeSel.value,10), backspace: backChk.checked, lang:'english', variety: varietySel.value}));
+  window.location.href = 'typing_test.html';
+}
+
+openCustom.addEventListener('click', ()=>{
+  // open test with no selected passage — typing_test will use options and allow paste
+  sessionStorage.removeItem('apna_selected_passage');
+  sessionStorage.setItem('apna_selected_options', JSON.stringify({time: parseInt(timeSel.value,10), backspace: backChk.checked, lang:'english', variety: varietySel.value}));
+  window.location.href = 'typing_test.html';
+});
+
+// init
+if(!passages || passages.length===0) seedDefaults(); render();
+</script>
+</body>
+</html>

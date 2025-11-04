@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Admin Panel — Apna Typing Master</title>
+<style>
+  body{font-family:Inter, Arial, sans-serif;background:#f4f6fb;margin:0;padding:18px}
+  .card{max-width:1100px;margin:12px auto;background:#fff;padding:16px;border-radius:10px;box-shadow:0 10px 30px rgba(12,20,40,0.06)}
+  h1{margin:0 0 12px}
+  .row{display:flex;gap:12px;align-items:center}
+  label{font-size:14px;color:#334155}
+  input,select,textarea,button{padding:8px;border-radius:8px;border:1px solid #e6eef8}
+  textarea{min-height:90px}
+  button.primary{background:linear-gradient(90deg,#06f,#009);color:white;border:none}
+  .passage-list{margin-top:12px;max-height:360px;overflow:auto}
+  .p-item{padding:10px;border-radius:8px;background:#f8fafc;margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+  .small{font-size:13px;color:#64748b}
+  .controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .danger{background:#fee2e2;color:#991b1b;border:none}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px;border-bottom:1px solid #eef2f7;text-align:left}
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Admin Panel — Apna Typing Master</h1>
+    <div class="small">Admin password: <code>admin123</code></div>
+
+    <div style="margin-top:12px">
+      <label>Enter Admin Password to open tools:</label>
+      <div class="row" style="margin-top:8px">
+        <input id="adminPass" placeholder="Password" />
+        <button id="unlockBtn" class="primary">Unlock Admin</button>
+      </div>
+    </div>
+
+    <div id="adminTools" style="display:none;margin-top:18px">
+      <h3>Passage Manager</h3>
+      <div class="row">
+        <select id="langSelect"><option value="english">English</option><option value="hindi">Hindi</option></select>
+        <input id="passTitle" placeholder="Passage title (optional)" style="flex:1" />
+      </div>
+
+      <div style="margin-top:8px">
+        <textarea id="passText" placeholder="Type or paste passage here..."></textarea>
+      </div>
+
+      <div class="controls">
+        <button id="addPass" class="primary">Add Passage</button>
+        <button id="updatePass">Update Selected</button>
+        <button id="clearForm">Clear Form</button>
+      </div>
+
+      <div style="margin-top:12px">
+        <div class="small">Passages (click to edit)</div>
+        <div id="passageList" class="passage-list"></div>
+      </div>
+
+      <h3 style="margin-top:18px">Site Settings</h3>
+      <div class="row">
+        <label>Default Time (seconds)</label>
+        <select id="defaultTime"><option value="60">60</option><option value="120">120</option><option value="300">300</option><option value="600">600</option><option value="900">900</option></select>
+
+        <label>Default Backspace</label>
+        <select id="defaultBack"><option value="allow">Allow</option><option value="disable">Disable</option></select>
+
+        <button id="saveSettings" class="primary">Save Settings</button>
+      </div>
+
+      <h3 style="margin-top:18px">History & Export</h3>
+      <div class="controls">
+        <button id="exportJSON">Export Passages (JSON)</button>
+        <button id="exportCSV">Export Passages (CSV)</button>
+        <button id="exportHistory">Export History (CSV)</button>
+        <button id="clearHistory" class="danger">Clear All History</button>
+      </div>
+
+      <h3 style="margin-top:18px">Passage Preview Table</h3>
+      <table id="passageTable">
+        <thead><tr><th>ID</th><th>Lang</th><th>Title</th><th>Text (preview)</th><th>Actions</th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="margin-top:12px" class="small">Note: All data stored in browser localStorage (no server). If you want multi-user shared storage, I can add backend APIs or Firebase integration.</div>
+    </div>
+
+  </div>
+
+<script>
+const PASS_KEY = 'apna_typing_passages_v_admin';
+const HIST_KEY = 'apna_typing_history_v_final';
+const SETTINGS_KEY = 'apna_typing_settings_v1';
+
+let passages = JSON.parse(localStorage.getItem(PASS_KEY) || '[]');
+let editingId = null;
+
+const unlockBtn = document.getElementById('unlockBtn');
+const adminPass = document.getElementById('adminPass');
+const adminTools = document.getElementById('adminTools');
+const passList = document.getElementById('passageList');
+const passTitle = document.getElementById('passTitle');
+const passText = document.getElementById('passText');
+const langSelect = document.getElementById('langSelect');
+const addPass = document.getElementById('addPass');
+const updatePass = document.getElementById('updatePass');
+const clearForm = document.getElementById('clearForm');
+const passageTableBody = document.querySelector('#passageTable tbody');
+
+unlockBtn.addEventListener('click', ()=>{
+  if(adminPass.value === 'admin123'){
+    adminTools.style.display = 'block'; unlockBtn.style.display='none'; adminPass.style.display='none';
+    loadSettings(); renderPassages();
+  } else alert('Wrong password');
+});
+
+addPass.addEventListener('click', ()=>{
+  const t = passTitle.value.trim(); const txt = passText.value.trim(); const lang = langSelect.value;
+  if(!txt) return alert('Paste passage first');
+  const id = Date.now();
+  passages.unshift({id, lang, title:t, text:txt});
+  save(); renderPassages(); clearFormFields(); alert('Passage added');
+});
+
+updatePass.addEventListener('click', ()=>{
+  if(!editingId) return alert('Select a passage to edit');
+  const idx = passages.findIndex(p=>p.id===editingId);
+  if(idx===-1) return alert('Passage not found');
+  passages[idx].title = passTitle.value.trim(); passages[idx].text = passText.value.trim(); passages[idx].lang = langSelect.value;
+  save(); renderPassages(); clearFormFields(); editingId=null; alert('Updated');
+});
+
+clearForm.addEventListener('click', clearFormFields);
+
+function clearFormFields(){ passTitle.value=''; passText.value=''; langSelect.value='english'; editingId=null; }
+
+function renderPassages(){
+  passList.innerHTML=''; passageTableBody.innerHTML='';
+  if(passages.length===0) passList.innerHTML='<div class="small">No passages yet</div>';
+  passages.forEach(p=>{
+    const d = document.createElement('div'); d.className='p-item';
+    d.innerHTML = `<div style="flex:1"><strong>${p.title||'(no title)'}</strong><div class="small">${p.text.slice(0,120)}</div></div><div style="display:flex;gap:6px"><button onclick='editPass(${p.id})'>Edit</button><button onclick='deletePass(${p.id})' class="danger">Delete</button></div>`;
+    passList.appendChild(d);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${p.id}</td><td>${p.lang}</td><td>${p.title||''}</td><td>${p.text.slice(0,160)}</td><td><button onclick='editPass(${p.id})'>Edit</button> <button onclick='deletePass(${p.id})' class="danger">Delete</button></td>`;
+    passageTableBody.appendChild(tr);
+  });
+}
+
+window.editPass = function(id){
+  const p = passages.find(x=>x.id===id); if(!p) return; editingId = id; passTitle.value=p.title; passText.value=p.text; langSelect.value=p.lang; window.scrollTo({top:0,behavior:'smooth'});
+}
+
+window.deletePass = function(id){ if(!confirm('Delete this passage?')) return; passages = passages.filter(x=>x.id!==id); save(); renderPassages(); }
+
+function save(){ localStorage.setItem(PASS_KEY, JSON.stringify(passages)); }
+
+// Settings
+const defaultTime = document.getElementById('defaultTime');
+const defaultBack = document.getElementById('defaultBack');
+const saveSettingsBtn = document.getElementById('saveSettings');
+
+saveSettingsBtn.addEventListener('click', ()=>{
+  const s = {time: parseInt(defaultTime.value,10), back: defaultBack.value};
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
+  alert('Settings saved');
+});
+
+function loadSettings(){ const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); if(s.time) defaultTime.value = s.time; if(s.back) defaultBack.value = s.back; }
+
+// Export functions
+document.getElementById('exportJSON').addEventListener('click', ()=>{ const blob = new Blob([JSON.stringify(passages,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='passages.json'; a.click(); URL.revokeObjectURL(url); });
+
+document.getElementById('exportCSV').addEventListener('click', ()=>{
+  const rows = [['id','lang','title','text']].concat(passages.map(p=>[p.id,p.lang, (p.title||''), (p.text||'').replace(/\n/g,'\\n')]));
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'}); const url = URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='passages.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+// Export history
+document.getElementById('exportHistory').addEventListener('click', ()=>{
+  const h = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  if(!h.length) return alert('No history to export');
+  const rows = [['time','user','netWpm','accuracy']].concat(h.map(r=>[r.time,r.user||'',r.netWpm,r.accuracy]));
+  const csv = rows.map(r=> r.map(c=> '"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='history.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+// Clear history
+document.getElementById('clearHistory').addEventListener('click', ()=>{ if(!confirm('Clear all history?')) return; localStorage.removeItem(HIST_KEY); alert('History cleared'); });
+
+// init seed (if none exist, provide small seed set)
+if(!passages || passages.length===0){ passages = [ {id:1, lang:'english', title:'Quick fox', text:'The quick brown fox jumps over the lazy dog.'}, {id:2, lang:'english', title:'Practice', text:'Practice regularly to improve your typing speed and accuracy.'}, {id:3, lang:'hindi', title:'नमूना', text:'नमस्ते, यह एक हिंदी टाइपिंग अभ्यास का पैरा है।'} ]; save(); }
+
+renderPassages(); loadSettings();
+</script>
+</body>
+</html>

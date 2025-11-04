@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hindi Passages – Apna Typing Master</title>
+  <style>
+    body{margin:0;padding:20px;background:#0a0f1e;color:#e8eef8;font-family:'Noto Sans Devanagari', Mangal, sans-serif}
+    h1{margin-top:0}
+    .card{background:#11182d;padding:20px;border-radius:12px;max-width:900px;margin:auto;box-shadow:0 6px 20px rgba(0,0,0,0.4)}
+    textarea,select,input,button{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:#0c1222;color:#fff;width:100%}
+    button.primary{background:#0af;border:none;color:#000;font-weight:bold;cursor:pointer}
+    .row{display:flex;gap:12px}
+    .passage-item{padding:10px;background:#1a233a;border-radius:8px;margin-bottom:10px;cursor:pointer}
+    .muted{color:#9bb0c9;font-size:14px;margin-bottom:6px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hindi Typing – Passage List</h1>
+
+    <div class="muted">Typing Font Select:</div>
+    <select id="fontSelect">
+      <option value="Mangal">Mangal (Inscript)</option>
+      <option value="KrutiDev">KrutiDev 010</option>
+      <option value="Remington">Remington</option>
+      <option value="NotoSansDeva">Noto Sans Devanagari</option>
+    </select>
+
+    <div class="muted" style="margin-top:15px">Select Time:</div>
+    <select id="timeSelect">
+      <option value="60">1 Minute</option>
+      <option value="120">2 Minutes</option>
+      <option value="300">5 Minutes</option>
+      <option value="600">10 Minutes</option>
+      <option value="900">15 Minutes</option>
+    </select>
+
+    <div style="margin-top:15px">
+      <label><input type="checkbox" id="disableBackspace" /> Backspace Disable</label>
+    </div>
+
+    <h2 style="margin-top:25px">Passage List</h2>
+    <div id="passageList"></div>
+
+    <h3 style="margin-top:25px">Add New Hindi Passage</h3>
+    <textarea id="newPassage" placeholder="नया पैरा यहाँ पेस्ट करें..." style="height:120px"></textarea>
+    <button class="primary" id="addBtn" style="margin-top:10px">Add Passage</button>
+
+  </div>
+
+  <script>
+    const PASS_KEY = 'apna_passages_hindi_v1';
+
+    let passages = JSON.parse(localStorage.getItem(PASS_KEY) || '[]');
+
+    // Seed default if empty
+    if(passages.length === 0){
+      passages = [
+        {id:1, text:'नमस्ते, यह एक हिंदी टाइपिंग अभ्यास का पैराग्राफ है। इसे टाइप करके अपनी गति और शुद्धता को बेहतर बनाएं।'},
+        {id:2, text:'उत्तर प्रदेश अधीनस्थ सेवा चयन आयोग की टाइपिंग परीक्षा में शुद्धता का विशेष महत्व होता है। प्रत्येक गलत शब्द पर पाँच अक्षरों की कटौती की जाती है।'}
+      ];
+      localStorage.setItem(PASS_KEY, JSON.stringify(passages));
+    }
+
+    function renderList(){
+      const box = document.getElementById('passageList');
+      box.innerHTML = '';
+      passages.forEach(p =>{
+        const d = document.createElement('div');
+        d.className = 'passage-item';
+        d.textContent = p.text.slice(0,80) + (p.text.length>80?'...':'');
+        d.onclick = ()=> openTest(p);
+        box.appendChild(d);
+      });
+    }
+
+    function openTest(p){
+      sessionStorage.setItem('typing_language','hindi');
+      sessionStorage.setItem('typing_font', document.getElementById('fontSelect').value);
+      sessionStorage.setItem('typing_time', document.getElementById('timeSelect').value);
+      sessionStorage.setItem('typing_backspace', document.getElementById('disableBackspace').checked);
+      sessionStorage.setItem('typing_passage', p.text);
+      window.location.href = 'typing_test.html';
+    }
+
+    document.getElementById('addBtn').onclick = ()=>{
+      let t = document.getElementById('newPassage').value.trim();
+      if(!t){ alert('पहले पैरा लिखें'); return; }
+      passages.unshift({id:Date.now(), text:t});
+      localStorage.setItem(PASS_KEY, JSON.stringify(passages));
+      document.getElementById('newPassage').value = '';
+      renderList();
+    };
+
+    renderList();
+  </script>
+</body>
+</html>
